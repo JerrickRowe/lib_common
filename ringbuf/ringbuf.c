@@ -14,7 +14,7 @@ void ringbuf_reset( ringbuf_t *r ){
 }
 
 // Initialize a ring-buffer.
-void ringbuf_init( ringbuf_t *r, uint8_t *pbuf, int32_t size, uint8_t mode ){
+void ringbuf_init( ringbuf_t *r, void *pbuf, int32_t size ){
     ASSERT( r );
     ASSERT( pbuf );
     r->pbuf = pbuf;
@@ -46,7 +46,7 @@ int32_t ringbuf_putbyte( ringbuf_t *r, uint8_t byte ){
         ret = -2;   // -2+1 == -1
         r->datalen --;
     }
-    *r->pin = byte;
+    *(uint8_t *)r->pin = byte;
     if( ++r->pin >= (r->pbuf + r->bufsize) ){
         r->pin = r->pbuf;   // Warp to the head of buffer.
     }
@@ -59,12 +59,12 @@ int32_t ringbuf_putbyte( ringbuf_t *r, uint8_t byte ){
 // 0 if nothing is written (insufficient free space)
 // To calculate how many data have been truncated
 // with (n - ringbuf_getfreespace()) 
-int32_t ringbuf_putbyte_n( ringbuf_t *r, uint8_t *src, int32_t n ){
+int32_t ringbuf_putbyte_n( ringbuf_t *r, void *src, int32_t n ){
     int32_t cnt = n;
     ASSERT( r );
     ASSERT( src );
     while( cnt-- ){
-        ringbuf_putbyte( r, *(src++) );
+        ringbuf_putbyte( r, *((uint8_t *)src++) );
     }
     return n;
 }
@@ -72,15 +72,15 @@ int32_t ringbuf_putbyte_n( ringbuf_t *r, uint8_t *src, int32_t n ){
 // Return:  
 // 1 if 1 byte is read
 // 0 if nothing is read
-int32_t ringbuf_getbyte( ringbuf_t *r, uint8_t *des ){
+int32_t ringbuf_getbyte( ringbuf_t *r, void *des ){
     ASSERT( r );
     ASSERT( des );
     if( r->datalen < 1 ){
         return 0; // Empty buffer.
     }
-    *des = *r->pout;
-    if( --r->pout < r->pbuf ){
-        r->pout = r->pbuf + r->bufsize - 1; // Warp to the tail of buffer.
+    *(uint8_t *)des = *(uint8_t *)(r->pout);
+    if( ++r->pout >= (r->pbuf + r->bufsize) ){
+        r->pout = r->pbuf;   // Warp to the head of buffer.
     }
     r->datalen --;
     return 1;
@@ -88,7 +88,7 @@ int32_t ringbuf_getbyte( ringbuf_t *r, uint8_t *des ){
 
 // Return:  
 // x if x byte is read (no enough data to get if x<n)
-int32_t ringbuf_getbyte_n( ringbuf_t *r, uint8_t *des, int32_t n ){
+int32_t ringbuf_getbyte_n( ringbuf_t *r, void *des, int32_t n ){
     int32_t remain = n;
     ASSERT( r );
     ASSERT( des );
@@ -103,12 +103,12 @@ int32_t ringbuf_getbyte_n( ringbuf_t *r, uint8_t *des, int32_t n ){
 
 // Return:  
 // x if x byte is read
-int32_t ringbuf_getbyte_all( ringbuf_t *r, uint8_t *des ){
+int32_t ringbuf_getbyte_all( ringbuf_t *r, void *des ){
     int32_t cnt=0, remain=r->datalen;
     ASSERT( r );
     ASSERT( des );
     while( remain-- ){
-        ringbuf_getbyte(r, &des[cnt++]);
+        ringbuf_getbyte(r, &((uint8_t *)des)[cnt++]);
     }
     return cnt;
 }
