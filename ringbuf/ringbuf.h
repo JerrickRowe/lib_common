@@ -4,13 +4,40 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define RINGBUF_USE_MUTEX	1
+#if RINGBUF_USE_MUTEX	
+	#define RINGBUF_USE_COND	1
+#else
+	#define RINGBUF_USE_COND	0
+#endif
+
+#if RINGBUF_USE_MUTEX 
+	#include <pthread.h> 
+	typedef struct{
+		pthread_mutex_t mutex;
+		pthread_cond_t datain;
+		pthread_cond_t dataout;
+	}MUTEX_TYPE;
+#endif
+
 typedef struct ringbuf_struct{
+	void *pbuf;
     int32_t bufsize;
-    int32_t datalen;
-    void *pbuf;
-    void *pin;
-    void *pout;
+    int32_t nextin;
+    int32_t nextout;
+	int32_t datalen;
+#if RINGBUF_USE_MUTEX 
+	MUTEX_TYPE mutex_obj;
+#endif
 }ringbuf_t;
+
+#define RINGBUF_USE_MALLOC 1
+#if RINGBUF_USE_MALLOC
+    // Alloc a new ringbuf
+    ringbuf_t *ringbuf_new( int32_t bufsize );
+    // Free up memmory
+    void ringbuf_free( ringbuf_t *ring );
+#endif
 
 // Initialize a ring-buffer.
 void ringbuf_init( ringbuf_t *ring, void *pbuf, int32_t size );
